@@ -41,8 +41,15 @@ def falling(n, k):
     >>> falling(4, 0)
     1
     """
-    "*** YOUR CODE HERE ***"
+    
+    assert n >= k # k should not be bigger than n
+    assert n >= 0 and k >= 0 # n and k are supposed to be positive
 
+    result = 1
+    while k > 0:
+        result *= n
+        k, n = k-1, n-1
+    return result
 
 def divisible_by_k(n, k):
     """
@@ -64,7 +71,14 @@ def divisible_by_k(n, k):
     >>> c
     0
     """
-    "*** YOUR CODE HERE ***"
+    
+    i, total = 1, 0
+    while i <= n:
+        if i % k == 0:
+            print(i)
+            total += 1
+        i += 1
+    return total
 
 
 def sum_digits(y):
@@ -80,7 +94,12 @@ def sum_digits(y):
     >>> a
     6
     """
-    "*** YOUR CODE HERE ***"
+    
+    total = 0
+    while y > 0:
+        total += y % 10
+        y = y // 10
+    return total
 
 
 def double_eights(n):
@@ -98,5 +117,11 @@ def double_eights(n):
     >>> double_eights(80808080)
     False
     """
-    "*** YOUR CODE HERE ***"
+    
+    while n >= 10:
+        if n % 100 == 88:
+            return True
+        n = n // 10
+
+    return False
 

@@ -37,7 +37,11 @@ def pick(paragraphs, select, k):
     ''
     """
     # BEGIN PROBLEM 1
-    "*** YOUR CODE HERE ***"
+    selected = [paragraph for paragraph in paragraphs if select(paragraph)]
+    if k >= 0 and k < len(selected):
+        return selected[k]
+    else:
+        return ''
     # END PROBLEM 1
 
 
@@ -57,7 +61,16 @@ def about(subject):
     assert all([lower(x) == x for x in subject]), "subjects should be lowercase."
 
     # BEGIN PROBLEM 2
-    "*** YOUR CODE HERE ***"
+    def select(paragraph):
+        """Return True if certain subjects are included in the paragraph.
+
+        Arguments:
+            paragraph: the paragraph to check
+        """
+        words = split( remove_punctuation(lower(paragraph)) )
+        return any([(s in words) for s in subject])
+
+    return select
     # END PROBLEM 2
 
 
@@ -87,7 +100,23 @@ def accuracy(typed, source):
     typed_words = split(typed)
     source_words = split(source)
     # BEGIN PROBLEM 3
-    "*** YOUR CODE HERE ***"
+    correct = 0
+    tplen, srlen = len(typed_words), len(source_words)
+    
+    # When there's no words typed in
+    if tplen == 0:
+        if srlen > 0:
+            return 0.0
+        elif srlen == 0:
+            return 100.0
+
+    # Count correct words
+    for i in range(min(tplen, srlen)):
+        if typed_words[i] == source_words[i]:
+            correct += 1
+
+    return correct / tplen * 100.0
+    
     # END PROBLEM 3
 
 
@@ -105,7 +134,7 @@ def wpm(typed, elapsed):
     """
     assert elapsed > 0, "Elapsed time must be positive"
     # BEGIN PROBLEM 4
-    "*** YOUR CODE HERE ***"
+    return (len(typed) / 5) / (elapsed / 60.0)
     # END PROBLEM 4
 
 
@@ -135,7 +164,14 @@ def memo_diff(diff_function):
 
     def memoized(typed, source, limit):
         # BEGIN PROBLEM EC
-        "*** YOUR CODE HERE ***"
+        if (typed, source) in cache:
+            cached_value, cached_limit = cache[(typed, source)]
+            if limit <= cached_limit:
+                return cached_value
+
+        new_value = diff_function(typed, source, limit)
+        cache[(typed, source)] = (new_value, limit)
+        return new_value
         # END PROBLEM EC
 
     return memoized
@@ -145,7 +181,7 @@ def memo_diff(diff_function):
 # Phase 2 #
 ###########
 
-
+@memo
 def autocorrect(typed_word, word_list, diff_function, limit):
     """Returns the element of WORD_LIST that has the smallest difference
     from TYPED_WORD based on DIFF_FUNCTION. If multiple words are tied for the smallest difference,
@@ -166,7 +202,19 @@ def autocorrect(typed_word, word_list, diff_function, limit):
     'testing'
     """
     # BEGIN PROBLEM 5
-    "*** YOUR CODE HERE ***"
+    # Return `typed_word` if it's contained in `word_list`
+    if typed_word in word_list:
+        return typed_word
+    # Find the word in `word_list` which is least-different from `typed_word` 
+    least_diff = limit + 1  # Set (limit + 1) as initial lowest difference
+    target_word = ''
+    for word in word_list:
+        diff = diff_function(typed_word, word, limit)
+        if diff < least_diff:
+            least_diff = diff
+            target_word = word
+    # Return `typed_word` if the lowest difference is larger than limit, otherwise return `target word`
+    return typed_word if least_diff > limit else target_word
     # END PROBLEM 5
 
 
@@ -193,10 +241,25 @@ def furry_fixes(typed, source, limit):
     5
     """
     # BEGIN PROBLEM 6
-    assert False, 'Remove this line'
+    tplen, srlen = len(typed), len(source)
+    len_diff = abs(tplen - srlen)
+    # Base case 1: If any empty string is passed in, just return the length difference
+    if not(tplen and srlen):
+        return len_diff
+    # Base case 2: If length difference is larger than limit, just return to avoid time wasting
+    if len_diff > limit:
+        return limit + 1
+    # Base case 3: If limit is reduced to -1, just return to avoid time wasting
+    if limit < 0:
+        return 1
+    
+    if typed[0] != source[0]:
+        return furry_fixes(typed[1:], source[1:], limit-1) + 1 
+    else:
+        return furry_fixes(typed[1:], source[1:], limit)
     # END PROBLEM 6
 
-
+@memo_diff
 def minimum_mewtations(typed, source, limit):
     """A diff function for autocorrect that computes the edit distance from TYPED to SOURCE.
     This function takes in a string TYPED, a string SOURCE, and a number LIMIT.
@@ -214,23 +277,62 @@ def minimum_mewtations(typed, source, limit):
     >>> minimum_mewtations("ckiteus", "kittens", big_limit) # ckiteus -> kiteus -> kitteus -> kittens
     3
     """
-    assert False, 'Remove this line'
-    if ___________: # Base cases should go here, you may add more base cases as needed.
-        # BEGIN
-        "*** YOUR CODE HERE ***"
-        # END
+    tplen, srlen = len(typed), len(source)
+    len_diff = abs(tplen - srlen)
+    # Base cases
+    if len_diff > limit: # If length difference is larger than limit, there's no way to fix it within limited steps
+        return limit + 1
+    if limit < 0: # If limit is reduced to -1, just return 1
+        return 1
+    if not(tplen and srlen): # If any argument receives empty string, just return length difference
+        return len_diff
+    if typed == source: # If two string are identical, return 0
+        return 0
+    add_banned, remove_banned = False, False
+    if tplen - srlen + 1 > limit - 1:   # If `add` operation results in impossible fix on length difference, we won't perform `add` 
+        add_banned = True
+    if tplen - srlen - 1 < - (limit - 1):   # If `remove` operation results in impossible fix on length difference, we won't perform `remove`  
+        remove_banned = True
     # Recursive cases should go below here
-    if ___________: # Feel free to remove or add additional cases
-        # BEGIN
-        "*** YOUR CODE HERE ***"
-        # END
+    """ *** The recursion goes too deep and result in "time limit exceeded" ***
+
+    add = [ typed[0:i] + source[min(i, srlen-1)] + typed[i:] for i in range(tplen+1) if i == tplen or typed[i] != source[min(i, srlen-1)] ]
+    remove = [ typed[0:i] + typed[i+1:] for i in range(tplen) if (i < srlen and typed[i] != source[i]) or i >= srlen] 
+    substitute = [ typed[0:i] + source[i] + typed[i+1:] for i in range(tplen) if i < srlen and typed[i] != source[i] ]
+    """
+    """ *** Unknown bug resulting in "index out of range"
+
+    add = [ typed[0:i] + source[i] + typed[i:] 
+            for i in range(tplen + 1) 
+            if typed[0:i] == source[0:i] and (i == tplen or (i < tplen and i < srlen and typed[i] != source[i]))
+          ]
+    remove = [ typed[0:i] + typed[i+1:] 
+               for i in range(tplen) 
+               if typed[0:i] == source[0:i] and (i == srlen or (i < tplen and i < srlen and typed[i] != source[i]))
+             ]
+    substitute = [ typed[0:i] + source[i] + typed[i+1:]
+                   for i in range(tplen)
+                   if typed[0:i] == source[0:i] and (i == tplen or i == srlen or (i < tplen and i < srlen and typed[i] != source[i]))
+                 ] if tplen == srlen else []
+    """
+
+    add, remove, substitute = [], [], []
+    for i in range(max(tplen, srlen)):
+        if typed[0:i+1] != source[0:i+1]:
+            if i < srlen and (not add_banned):
+                add = [typed[0:i] + source[i] + typed[i:]]
+            if i < tplen and (not remove_banned):
+                remove = [typed[0:i] + typed[i+1:]]
+            if i < srlen and i < tplen:
+                substitute = [typed[0:i] + source[i] + typed[i+1:]]
+            break
+
+    
+    all_fixed = add + remove + substitute
+    if source in all_fixed:
+        return 1
     else:
-        add = ... # Fill in these lines
-        remove = ...
-        substitute = ...
-        # BEGIN
-        "*** YOUR CODE HERE ***"
-        # END
+        return min([minimum_mewtations(fixed, source, limit-1) + 1 for fixed in all_fixed])
 
 
 # Ignore the line below
@@ -275,7 +377,15 @@ def report_progress(typed, source, user_id, upload):
     0.2
     """
     # BEGIN PROBLEM 8
-    "*** YOUR CODE HERE ***"
+    i, tplen = 0, len(typed)
+    while i < tplen:
+        if typed[i] != source[i]:
+            break
+        i += 1
+    progress = i / len(source)
+    info = {'id': user_id, 'progress': progress}
+    upload(info)
+    return progress
     # END PROBLEM 8
 
 
@@ -299,7 +409,7 @@ def time_per_word(words, timestamps_per_player):
     """
     tpp = timestamps_per_player  # A shorter name (for convenience)
     # BEGIN PROBLEM 9
-    times = []  # You may remove this line
+    times = [ [timestamps[i+1] - timestamps[i] for i in range(len(timestamps) - 1)] for timestamps in tpp ]
     # END PROBLEM 9
     return {'words': words, 'times': times}
 
@@ -326,7 +436,17 @@ def fastest_words(words_and_times):
     player_indices = range(len(times))  # contains an *index* for each player
     word_indices = range(len(words))    # contains an *index* for each word
     # BEGIN PROBLEM 10
-    "*** YOUR CODE HERE ***"
+    result = []
+    for _ in player_indices:    # Store results to be returned
+        result += [[]]
+
+    for word_index in word_indices:
+        min_time = min([get_time(times, player_index, word_index) for player_index in player_indices])    # Find the minimum of times of all players typing a specific word
+        for player_index in player_indices: 
+            if times[player_index][word_index] == min_time:
+                result[player_index] += [words[word_index]]
+                break
+    return result
     # END PROBLEM 10
 
 
@@ -407,3 +527,5 @@ def run(*args):
     args = parser.parse_args()
     if args.t:
         run_typing_test(args.topic)
+
+
